@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+// Necessary for Next auth
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String? // @db.Text
+  access_token             String? // @db.Text
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String? // @db.Text
+  session_state            String?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refresh_token_expires_in Int?
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id               String    @id @default(cuid())
+  username         String    @unique @default(cuid())
+  name             String?
+  email            String?   @unique
+  emailVerified    DateTime?
+  image            String?
+  accounts         Account[]
+  sessions         Session[]
+  role             String            @default("USER")
+  departmentId     Int?
+  department       Department? @relation(fields: [departmentId], references: [id])
+  maintenanceLogs MaintenanceLog[]
+
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Department {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  assets Asset[]
+  users  User[]
+}
+
+model Asset {
+  id              Int      @id @default(autoincrement())
+  name            String
+  type            String
+  location        String
+  purchaseDate    DateTime
+  lastMaintenance DateTime?
+  status          String
+  departmentId    Int
+  buyPrice        Float
+  maintenancePrice   Float
+  replacementPrice    Float
+  latitude        Float?
+  longitude       Float?
+  department      Department @relation(fields: [departmentId], references: [id])
+  maintenanceLogs MaintenanceLog[]
+  communityReports CommunityReport[]
+}
+
+model MaintenanceLog {
+  id        Int      @id @default(autoincrement())
+  assetId   Int
+  asset     Asset    @relation(fields: [assetId], references: [id])
+  date      DateTime
+  type      String
+  cost      Float
+  notes     String?
+  performedBy String
+  user      User     @relation(fields: [performedBy], references: [id])
+}
+
+model CommunityReport {
+  id           Int      @id @default(autoincrement())
+  assetId      Int?
+  asset        Asset?   @relation(fields: [assetId], references: [id])
+  reporterName String
+  image        String?
+  issue        String
+  status       String
+  createdAt    DateTime @default(now())
+  department   String
+  resolution     String?
+}
